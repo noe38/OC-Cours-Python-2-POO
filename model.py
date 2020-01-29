@@ -33,19 +33,23 @@ class Zone:
     MAX_LONGITUDE_DEGREES = 180
     MIN_LATITUDE_DEGREES = -90
     MAX_LATITUDE_DEGREES = 90
-    WIDTH_DEGREES = 1
-    HEIGHT_DEGREES = 1
+    WIDTH_DEGREES = 1 #degrees of longitude
+    HEIGHT_DEGREES = 1 #degrees of latitude
 
     def __init__(self, corner1, corner2):
         self.corner1 = corner1
         self.corner2 = corner2
         self.inhabitants = 0
 
-    def initialize_zones(self):
-        for latitude in range(self.MIN_LATITUDE_DEGREES, self.MAX_LATITUDE_DEGREES, self.WIDTH_DEGREES)
-            for longitude in range(self.MIN_LONGITUDE_DEGREES, self.MAX_LONGITUDE_DEGREES, self.WIDTH_DEGREES)
+    @classmethod
+    def initialize_zones(cls):
+        for latitude in range(cls.MIN_LATITUDE_DEGREES, cls.MAX_LATITUDE_DEGREES, cls.HEIGHT_DEGREES):
+            for longitude in range(cls.MIN_LONGITUDE_DEGREES, cls.MAX_LONGITUDE_DEGREES, cls.WIDTH_DEGREES):
                 bottom_left_corner = Position(longitude, latitude)
-                top_right_corner = Position(longitude + self.WIDTH_DEGREES, latitude + self.HEIGHT_DEGREES)
+                top_right_corner = Position(longitude + cls.WIDTH_DEGREES, latitude + cls.HEIGHT_DEGREES)
+                zone = Zone(bottom_left_corner, top_right_corner)
+                cls.ZONES.append(zone)
+        print(len(cls.ZONES))                
 
 def main():
     for agent_attributes in json.load(open("agents-100k.json")):
@@ -53,7 +57,7 @@ def main():
         longitude = agent_attributes.pop("longitude")
         position = Position(latitude, longitude)
         agent = Agent(position, **agent_attributes)
-        print(Zone.MIN_LONGITUDE_DEGREES)
+        Zone.initialize_zones()
         
 
 main()
