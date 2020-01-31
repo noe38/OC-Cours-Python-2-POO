@@ -1,5 +1,8 @@
 import json
 import math
+import matplotlib as mil
+mil.use('TkAgg')
+import matplotlib.pyplot as plt
 
 class Agent:
 
@@ -57,13 +60,25 @@ class Zone:
 
     @property
     def area(self):
+        """Compute the zone area, in square kilometers"""
         return self.height * self.width
 
     def population_density(self):
+        """ Population density of the zone, (people/km2)"""
         return self.population / self.area
 
     def add_inhabitant(self, inhabitant):
         self.inhabitants.append(inhabitant)
+
+    def average_agreeableness(self):
+        if not self.inhabitants:
+            return 0
+        """ agreeableness = []
+        for inhabitant in self.inhabitants:
+            agreeableness.append(inhabitant.agreeableness)
+        return sum(agreeableness)/self.population """
+        # ci-dessus à été remplacé par ci-dessous:
+        return sum([inhabitant.agreeableness for inhabitant in self.inhabitants])/self.population
 
     def contains(self, position):
         return position.longitude >= min(self.corner1.longitude, self.corner2.longitude) and \
@@ -73,9 +88,11 @@ class Zone:
 
     @classmethod
     def find_zone_that_contains(cls, position):
-        # Compute the index in the ZONES array that contains the given position
         if not cls.ZONES:
+            # Initialize zones automatically if necessary
             cls._initialize_zones()
+
+        # Compute the index in the ZONES array that contains the given position
         longitude_index = int((position.longitude_degrees - cls.MIN_LONGITUDE_DEGREES)/cls.WIDTH_DEGREES)
         latitude_index = int((position.latitude_degrees - cls.MIN_LATITUDE_DEGREES)/cls.HEIGHT_DEGREES)
         longitude_bins = int((cls.MAX_LONGITUDE_DEGREES - cls.MIN_LONGITUDE_DEGREES)/cls.WIDTH_DEGREES) # 180-(-180)/1
@@ -99,19 +116,42 @@ class Zone:
                 zone = Zone(bottom_left_corner, top_right_corner)
                 cls.ZONES.append(zone)
 
-    def average_agreeableness(self):
-        if not self.inhabitants:
-            return 0
-        """ agreeableness = []
-        for inhabitant in self.inhabitants:
-            agreeableness.append(inhabitant.agreeableness)
-        return sum(agreeableness)/self.population """
-        # ci-dessus à été remplacé par ci-dessous:
-        return sum([inhabitant.agreeableness for inhabitant in self.inhabitants])/self.population
-        
+            
+class BaseGraph:
 
+    def __init__(self):
+        self.title = "Your graph title"
+        self.x_label = "X-axis label"
+        self.y_label = "Y-axis label"
+        self.show_grid = True
+
+    def show(self, zones):
+        x_values, y_values = self.xy_values(zones)
+        plt.plot(x_values, y_values, '.')
+        plt.xlabel(self.x_label)
+        plt.ylabel(self.y_label)
+        plt.title(self.title)
+        plt.grid(self.show_grid)
+        plt.show()
+
+    def xy_values(self, zones):
+        # Si cette méthode n'est pas redéfinie dans la classe enfant alors c'est elle qui est utilisée et ça va donner une erreur
+        raise NotImplementedError
      
- 
+class AgreeablenessGraph(BaseGraph):
+
+    def __init__(self):
+        super().__init__()
+        self.title = "Nice people live in the countryside"
+        self.x_label = "population density"
+        self.y_label = "agreeableness"
+
+    def xy_values(self, zones):
+        x_values = [zone.population_density() for zone in zones]
+        y_values = [zone.average_agreeableness() for zone in zones]
+        return x_values, y_values
+
+
 def main():
     for agent_attributes in json.load(open("agents-100k.json")):
         latitude = agent_attributes.pop("latitude")
@@ -120,7 +160,12 @@ def main():
         agent = Agent(position, **agent_attributes)      
         zone = Zone.find_zone_that_contains(position)
         zone.add_inhabitant(agent)
-        print("Moyenne agréabilité: ", zone.average_agreeableness())
+        #print("Moyenne agréabilité: ", zone.average_agreeableness())
+
+    # Graph initialization
+    agreeableness_graph = AgreeablenessGraph()
+    # Show graph
+    agreeableness_graph.show(Zone.ZONES)
         
 
 main()
