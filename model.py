@@ -36,6 +36,7 @@ class Zone:
     MAX_LATITUDE_DEGREES = 90
     WIDTH_DEGREES = 1 #degrees of longitude
     HEIGHT_DEGREES = 1 #degrees of latitude
+    EARTH_RADIUS_KILOMETERS = 6371
 
     def __init__(self, corner1, corner2):
         self.corner1 = corner1
@@ -45,6 +46,21 @@ class Zone:
     @property
     def population(self):
         return len(self.inhabitants)
+
+    @property
+    def width(self):
+        return abs((self.corner1.longitude - self.corner2.longitude) * self.EARTH_RADIUS_KILOMETERS)
+
+    @property
+    def height(self):
+        return abs((self.corner1.latitude - self.corner2.latitude) * self.EARTH_RADIUS_KILOMETERS)
+
+    @property
+    def area(self):
+        return self.height * self.width
+
+    def population_density(self):
+        return self.population / self.area
 
     def add_inhabitant(self, inhabitant):
         self.inhabitants.append(inhabitant)
@@ -82,6 +98,16 @@ class Zone:
                 top_right_corner = Position(longitude + cls.WIDTH_DEGREES, latitude + cls.HEIGHT_DEGREES)
                 zone = Zone(bottom_left_corner, top_right_corner)
                 cls.ZONES.append(zone)
+
+    def average_agreeableness(self):
+        if not self.inhabitants:
+            return 0
+        """ agreeableness = []
+        for inhabitant in self.inhabitants:
+            agreeableness.append(inhabitant.agreeableness)
+        return sum(agreeableness)/self.population """
+        # ci-dessus à été remplacé par ci-dessous:
+        return sum([inhabitant.agreeableness for inhabitant in self.inhabitants])/self.population
         
 
      
@@ -94,7 +120,7 @@ def main():
         agent = Agent(position, **agent_attributes)      
         zone = Zone.find_zone_that_contains(position)
         zone.add_inhabitant(agent)
-        print("Zone population: ", zone.population)
+        print("Moyenne agréabilité: ", zone.average_agreeableness())
         
 
 main()
