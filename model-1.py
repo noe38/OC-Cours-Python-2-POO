@@ -1,56 +1,38 @@
-import argparse
-from collections import defaultdict # for income graph
-
 import json
 import math
-
 import matplotlib as mil
 mil.use('TkAgg')
 import matplotlib.pyplot as plt
 
 class Agent:
 
-    def __init__(self, position, **properties):
-        self.position = position
-        for property_name, property_value in properties.items():
-            setattr(self, property_name, property_value)
+    #def say_hello(self, first_name):
+    #    return "Bien le bonjour " + first_name + " !"
 
+    def __init__(self, position, **agent_attributes):
+        self.position = position
+        for attr_name, attr_value in agent_attributes.items():
+            setattr(self, attr_name, attr_value)
 
 class Position:
-
     def __init__(self, longitude_degrees, latitude_degrees):
-        # We store the degree values, but we will be mostly using radians
-        # because they are much more convenient for computation purposes.
-
-        # assert : Lève une exception si renvoie False
-        assert -180 <= longitude_degrees <= 180
-        self.longitude_degrees = longitude_degrees
-        assert -90 <= latitude_degrees <= 90
         self.latitude_degrees = latitude_degrees
+        self.longitude_degrees = longitude_degrees
 
     @property
     def longitude(self):
-        """ Longitude in radians """
+        # longitude in radians
         return self.longitude_degrees * math.pi / 180
 
     @property
     def latitude(self):
-        """ Latitude in radians """
+        # latitude in radians
         return self.latitude_degrees * math.pi / 180
 
  
 class Zone:
-    """
-    A rectangular geographic area bounded by two corner. The corners can
-    be top-left and bottom right, or top-right and bottom-left so you should be
-    careful when computing the distances between them.
-    """
 
     ZONES = []
-    # The width and height of the zones that will be added to ZONES. Here we
-    # choose square zones but we could just as well use rectangular shapes.
-
-    # Attributes de classe (constante si hors de la classe) car on fait cls.WIDTH_DEGREES
     MIN_LONGITUDE_DEGREES = -180
     MAX_LONGITUDE_DEGREES = 180
     MIN_LATITUDE_DEGREES = -90
@@ -59,8 +41,6 @@ class Zone:
     HEIGHT_DEGREES = 1 #degrees of latitude
     EARTH_RADIUS_KILOMETERS = 6371
 
-    # S'il y a un attribut d'instance, il va dans __init__
-
     def __init__(self, corner1, corner2):
         self.corner1 = corner1
         self.corner2 = corner2
@@ -68,35 +48,27 @@ class Zone:
 
     @property
     def population(self):
-        """ Number of inhabitants in the zone """
         return len(self.inhabitants)
 
     @property
     def width(self):
-        """ Zone width, in kilometers """
-        # Note that here we access the class attribute via "self" and
-        # it doesn't make any difference
-        return abs(self.corner1.longitude - self.corner2.longitude) * self.EARTH_RADIUS_KILOMETERS
+        return abs((self.corner1.longitude - self.corner2.longitude) * self.EARTH_RADIUS_KILOMETERS)
 
     @property
     def height(self):
-        """ Zone height, in kilometers """
-        # Note that here we access the class attribute via "self" and
-        # it doesn't make any difference
-        return abs(self.corner1.latitude - self.corner2.latitude) * self.EARTH_RADIUS_KILOMETERS
+        return abs((self.corner1.latitude - self.corner2.latitude) * self.EARTH_RADIUS_KILOMETERS)
 
-    def add_inhabitant(self, inhabitant):
-        self.inhabitants.append(inhabitant)
-
-    def population_density(self):
-        """ Population density of the zone, (people/km2)"""
-        # Note that this will crash with a ZeroDivisionError if the zone has 0 area
-        # but it should really not happen
-        return self.population / self.area()
-
+    @property
     def area(self):
         """Compute the zone area, in square kilometers"""
         return self.height * self.width
+
+    def population_density(self):
+        """ Population density of the zone, (people/km2)"""
+        return self.population / self.area
+
+    def add_inhabitant(self, inhabitant):
+        self.inhabitants.append(inhabitant)
 
     def average_agreeableness(self):
         if not self.inhabitants:
@@ -148,45 +120,28 @@ class Zone:
 class BaseGraph:
 
     def __init__(self):
-        self.show_grid = True
-
         self.title = "Your graph title"
         self.x_label = "X-axis label"
         self.y_label = "Y-axis label"
-        
+        self.show_grid = True
 
     def show(self, zones):
         x_values, y_values = self.xy_values(zones)
-        self.plot(x_values, y_values)
-
+        plt.plot(x_values, y_values, '.')
         plt.xlabel(self.x_label)
         plt.ylabel(self.y_label)
         plt.title(self.title)
         plt.grid(self.show_grid)
         plt.show()
 
-    def plot(self, x_values, y_values):
-        """ Override this method to create different kinds of graphs, such as histograms """
-        # http://matplotlib.org/api/pyplot_api.html#matplotlib.pyplot.plot
-        plt.plot(x_values, y_values, '.')
-
     def xy_values(self, zones):
-        """
-        Returns:
-            x_values
-            y_vales
-        """
-        # You should implement this method in your children classes
         # Si cette méthode n'est pas redéfinie dans la classe enfant alors c'est elle qui est utilisée et ça va donner une erreur
         raise NotImplementedError
      
 class AgreeablenessGraph(BaseGraph):
-    # Inheritance, yay!
 
     def __init__(self):
-        # Call base constructor
-        super(AgreeablenessGraph, self).__init__()
-
+        super().__init__()
         self.title = "Nice people live in the countryside"
         self.x_label = "population density"
         self.y_label = "agreeableness"
@@ -196,45 +151,14 @@ class AgreeablenessGraph(BaseGraph):
         y_values = [zone.average_agreeableness() for zone in zones]
         return x_values, y_values
 
-class IncomeGraph(BaseGraph):
-    # Inheritance, baby 2, yay!
-
-    def __init__(self):
-        # Call base contructo
-        super(IncomeGraph, self).__init__()
-
-        self.title = "Older people have more money"
-        self.x_label = "age"
-        self.y_label = "income"
-
-    def xy_values(self, zones):
-        income_by_age = defaultdict(float)
-        population_by_age = defaultdict(int)
-        for zone in zones:
-            for inhabitant in zone.inhabitants:
-                income_by_age[inhabitant.age] += inhabitant.income
-                population_by_age[inhabitant.age] += 1
-
-        x_values = range(0, 100)
-        # list comprehension (liscomps)
-        y_values = [income_by_age[age] / (population_by_age[age] or 1) for age in range(0, 100)]
-        return x_values, y_values
 
 def main():
-    # Si on avait mis tout ça en bas, on aurait eu beaucoup de variable globales
-    parser = argparse.ArgumentParser("Display population stats")
-    parser.add_argument("src", help="Path to source json agents file")
-    args = parser.parse_args()
-
-    # Load agents
-    for agent_properties in json.load(open(args.src)):
-        latitude = agent_properties.pop("latitude")
-        longitude = agent_properties.pop("longitude")
-        # Store agent position in radians
+    for agent_attributes in json.load(open("agents-100k.json")):
+        latitude = agent_attributes.pop("latitude")
+        longitude = agent_attributes.pop("longitude")
         position = Position(longitude, latitude)
-
+        agent = Agent(position, **agent_attributes)      
         zone = Zone.find_zone_that_contains(position)
-        agent = Agent(position, **agent_properties)         
         zone.add_inhabitant(agent)
         #print("Moyenne agréabilité: ", zone.average_agreeableness())
 
@@ -242,9 +166,6 @@ def main():
     agreeableness_graph = AgreeablenessGraph()
     # Show graph
     agreeableness_graph.show(Zone.ZONES)
-    
-    income_graph = IncomeGraph()
-    income_graph.show(Zone.ZONES)
+        
 
-if __name__ == "__main__":
-    main()
+main()
